@@ -1,0 +1,7 @@
+openai
+python-dotenv
+SpeechRecognition
+pyttsx3
+PyQt6
+pyaudio
+requests
