@@ -4,15 +4,35 @@ const API_URL = "http://127.0.0.1:8765";
 
 export default function JarvisDashboard({ currentUser, onLogout }) {
   const [apiOnline, setApiOnline] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      id: crypto.randomUUID(),
-      role: "jarvis",
-      text: "Verificando conexao com a API Python...",
-      source: "system",
-      time: new Date(),
-    },
-  ]);
+  const messagesStorageKey = useMemo(
+    () => `jarvis.messages.${currentUser?.id ?? "default"}`,
+    [currentUser?.id],
+  );
+
+  const [messages, setMessages] = useState(() => {
+    const stored = localStorage.getItem(messagesStorageKey);
+    if (stored) {
+      try {
+        return JSON.parse(stored).map((message) => ({
+          ...message,
+          time: new Date(message.time),
+        }));
+      } catch {
+        return [];
+      }
+    }
+
+    return [
+      {
+        id: crypto.randomUUID(),
+        role: "jarvis",
+        text: "Verificando conexao com a API Python...",
+        source: "system",
+        time: new Date(),
+      },
+    ];
+  });
+
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -20,9 +40,10 @@ export default function JarvisDashboard({ currentUser, onLogout }) {
   const [isListening, setIsListening] = useState(false);
   const inputRef = useRef(null);
   const messagesRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const browserCanListen = useMemo(
-    () => "webkitSpeechRecognition" in window || "SpeechRecognition" in window,
+    () => Boolean(getSpeechRecognition()),
     [],
   );
 
@@ -94,10 +115,11 @@ export default function JarvisDashboard({ currentUser, onLogout }) {
     });
   }, [messages]);
 
-  async function sendMessage(event) {
-    event?.preventDefault();
-    const text = input.trim();
+  useEffect(() => {
+    localStorage.setItem(messagesStorageKey, JSON.stringify(messages));
+  }, [messages, messagesStorageKey]);
 
+  async function submitCommand(text) {
     if (!text || isSending) {
       return;
     }
@@ -115,6 +137,7 @@ export default function JarvisDashboard({ currentUser, onLogout }) {
         body: JSON.stringify({
           message: text,
           speak: voiceEnabled,
+          user_id: currentUser?.id,
         }),
       });
 
@@ -136,6 +159,66 @@ export default function JarvisDashboard({ currentUser, onLogout }) {
       );
     } finally {
       setIsSending(false);
+    }
+  }
+
+  async function sendMessage(event) {
+    event?.preventDefault();
+    await submitCommand(input.trim());
+  }
+
+  async function listenWithBackend(reason = "fallback") {
+    if (isSending) {
+      return;
+    }
+
+    setIsListening(true);
+    addMessage(
+      "jarvis",
+      reason === "network"
+        ? "A voz do navegador falhou por rede. Vou escutar pelo backend Python."
+        : "Vou escutar pelo backend Python.",
+      "system",
+    );
+
+    try {
+      const response = await fetch(`${API_URL}/api/listen`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          speak: voiceEnabled,
+          user_id: currentUser?.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        addMessage(
+          "jarvis",
+          data.error ?? "Nao consegui ouvir pelo backend Python.",
+          "error",
+        );
+        return;
+      }
+
+      if (data.transcript) {
+        addMessage("user", data.transcript, "voice");
+      }
+
+      addMessage("jarvis", data.response, data.source);
+      setApiOnline(true);
+    } catch {
+      setApiOnline(false);
+      addMessage(
+        "jarvis",
+        "Nao consegui conectar ao backend para ouvir pelo microfone.",
+        "error",
+      );
+    } finally {
+      setIsListening(false);
     }
   }
 
@@ -173,33 +256,90 @@ export default function JarvisDashboard({ currentUser, onLogout }) {
     URL.revokeObjectURL(url);
   }
 
-  function startBrowserListening() {
-    if (!browserCanListen || isListening) {
+  async function startBrowserListening() {
+    if (isListening) {
       return;
     }
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = getSpeechRecognition();
+
+    if (!SpeechRecognition) {
+      await listenWithBackend("unsupported");
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      addMessage(
+        "jarvis",
+        "O navegador nao liberou acesso ao microfone nesta pagina.",
+        "error",
+      );
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+    } catch {
+      addMessage(
+        "jarvis",
+        "Permissao do microfone negada. Libere o microfone no navegador e toque em MIC novamente.",
+        "error",
+      );
+      return;
+    }
+
+    recognitionRef.current?.abort();
+
     const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
 
     recognition.lang = "pt-BR";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => {
-      setIsListening(false);
-      addMessage("jarvis", "Nao consegui acessar o microfone do navegador.", "error");
+    recognition.continuous = false;
+    recognition.onstart = () => {
+      setIsListening(true);
+      addMessage("jarvis", "Estou ouvindo. Pode falar o comando.", "system");
     };
-    recognition.onresult = (event) => {
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+    recognition.onerror = (event) => {
+      const messagesByError = {
+        "not-allowed": "Permissao do microfone bloqueada pelo navegador.",
+        "no-speech": "Nao ouvi nenhum comando. Toque em MIC e tente falar de novo.",
+        "audio-capture": "Nao encontrei um microfone ativo neste computador.",
+        network: "O reconhecimento de voz do navegador falhou por rede.",
+      };
+
+      addMessage("jarvis", "Nao consegui acessar o microfone do navegador.", "error");
+      addMessage(
+        "jarvis",
+        messagesByError[event.error] ?? `Erro de microfone: ${event.error}`,
+        "error",
+      );
+
+      if (event.error === "network") {
+        recognition.abort();
+        window.setTimeout(() => {
+          listenWithBackend("network");
+        }, 200);
+      }
+    };
+    recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
       setInput(transcript);
-      window.setTimeout(() => {
-        inputRef.current?.form?.requestSubmit();
-      }, 80);
+      await submitCommand(transcript.trim());
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      addMessage("jarvis", "Nao consegui iniciar a escuta do microfone.", "error");
+    }
   }
 
   return (
@@ -352,7 +492,7 @@ export default function JarvisDashboard({ currentUser, onLogout }) {
               />
               <ActionButton
                 active={isListening}
-                disabled={!browserCanListen}
+                disabled={!browserCanListen && !apiOnline}
                 label="MIC"
                 onClick={startBrowserListening}
               />
@@ -493,6 +633,14 @@ function ActionButton({ active, disabled = false, label, onClick }) {
       {label}
     </button>
   );
+}
+
+function getSpeechRecognition() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
 function formatTime(date) {
