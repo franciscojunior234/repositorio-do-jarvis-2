@@ -1,0 +1,158 @@
+================================================================================
+                    🚀 COMECE AQUI - INSTRUÇÕES INICIAIS
+================================================================================
+
+SEU JARVIS FOI COMPLETAMENTE RESTAURADO! ✅
+
+Localização: c:\Users\aluno\OneDrive\Documentos\JARVIS DIA2\
+
+================================================================================
+PASSO 1: ABRIR TERMINAL POWERSHELL
+================================================================================
+
+1. Pressione: Win + X
+2. Clique em: "Terminal (Admin)" ou "Windows PowerShell (Admin)"
+3. Confirme a elevação de privilégios se pedido
+
+================================================================================
+PASSO 2: NAVEGAR ATÉ O DIRETÓRIO
+================================================================================
+
+Copie e cole no terminal:
+
+    cd c:\Users\aluno\OneDrive\Documentos\JARVIS DIA2\JARVIS-IA
+
+================================================================================
+PASSO 3: INSTALAR DEPENDÊNCIAS (UM TEMPO)
+================================================================================
+
+Copie e cole no terminal:
+
+    pip install -r requirements.txt
+
+Isto vai levar alguns minutos (entre 5-15 minutos).
+Aguarde até ver "Successfully installed..." no final.
+
+================================================================================
+PASSO 4: CONFIGURAR API KEY DO GROQ (IMPORTANTE!)
+================================================================================
+
+Abra a API Key do Groq que você deve ter e copie.
+
+Depois, em PowerShell, execute:
+
+    $env:GROQ_API_KEY = "COLE_SUA_API_KEY_AQUI"
+
+Exemplo:
+    $env:GROQ_API_KEY = "gsk_abc123xyz456..."
+
+================================================================================
+PASSO 5: INICIAR JARVIS
+================================================================================
+
+Volte um diretório e execute launcher.py:
+
+    cd ..
+    python launcher.py
+
+Isto vai:
+  ✅ Iniciar API Server (http://127.0.0.1:8765)
+  ✅ Iniciar Frontend React (http://localhost:5173)
+  ✅ Abrir Chrome automaticamente
+  ✅ Tudo em uma única execução!
+
+================================================================================
+ALTERNATIVAS PARA INICIAR
+================================================================================
+
+Se quiser iniciar apenas uma coisa:
+
+A) SÓ BACKEND (API HTTP):
+   cd JARVIS-IA
+   python api_server.py
+   
+   Acesso: http://127.0.0.1:8765/api/status
+
+B) GUI DESKTOP:
+   python main.py
+   
+   (Interface gráfica com controle de voz)
+
+C) DEMO INTERATIVA:
+   python demo_advanced_features.py
+   
+   (Testa todos os recursos avançados)
+
+================================================================================
+VOILÀ! ESTÁ FUNCIONANDO?
+================================================================================
+
+✅ Se Chrome abriu em http://localhost:5173
+   → Sistema está funcionando!
+
+✅ Se você vê "API online em http://127.0.0.1:8765"
+   → Backend está funcionando!
+
+❌ Se algo não funciona?
+   → Verifique:
+   1. Python instalado? (python --version)
+   2. Dependências? (pip install -r requirements.txt)
+   3. API Key configurada? (echo $env:GROQ_API_KEY)
+
+================================================================================
+ARQUIVOS RESTAURADOS
+================================================================================
+
+Foram restaurados:
+  ✅ 35+ arquivos Python
+  ✅ 12 diretórios de módulos
+  ✅ 3000+ linhas de código
+  ✅ 5 features avançadas completas
+
+Estrutura:
+  JARVIS DIA2/
+  ├── frontend/ (não foi deletado)
+  ├── JARVIS-IA/ ← SUA PASTA RESTAURADA
+  ├── launcher.py
+  └── START.bat
+
+================================================================================
+PRÓXIMOS PASSOS OPCIONAIS
+================================================================================
+
+1. Para casa inteligente (IoT):
+   - Instale Mosquitto: choco install mosquitto
+   - Inicie broker: mosquitto -v
+   - Execute demo: python demo_advanced_features.py
+
+2. Para testes avançados:
+   - Leia: JARVIS-IA/README.md
+   - Execute: python demo_advanced_features.py
+   - Teste API: python -c "from app.assistant import process_command; print(process_command('Oi'))"
+
+3. Para customização:
+   - Edite app/assistant.py (WAKE_WORDS)
+   - Configure app/ml/learning_engine.py
+   - Customize app/interface/jarvis_ui.py
+
+================================================================================
+SUPORTE RÁPIDO
+================================================================================
+
+Erro ao instalar dependências?
+  → Tente: pip install --upgrade pip
+  → Depois: pip install -r requirements.txt --no-cache-dir
+
+Erro "API_KEY not found"?
+  → Configure: $env:GROQ_API_KEY = "sua-chave"
+  → Verifique: echo $env:GROQ_API_KEY
+
+Microfone não funciona?
+  → Instale: pip install pyaudio
+  → Reinicie: Restart-Computer
+
+================================================================================
+
+                    PRONTO! BOA SORTE COM SEU JARVIS! 🤖
+
+================================================================================
