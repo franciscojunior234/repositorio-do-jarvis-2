@@ -11,5 +11,5 @@ echo ╚════════════════════════
 echo.
 
 cd /d "%~dp0"
-python launcher.py
+.venv\Scripts\python.exe launcher.py
 pause

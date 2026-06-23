@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launcher automatico do JARVIS."""
+"""Launcher apenas do Frontend React para o JARVIS."""
 
 import shutil
 import os
@@ -9,32 +9,9 @@ import time
 import webbrowser
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
-API_SCRIPT = BASE_DIR / "api_server.py"
 FRONTEND_URL = "http://localhost:5173"
-API_URL = "http://127.0.0.1:8765"
-
-
-def start_api_server():
-    print("Iniciando servidor Python API...")
-
-    if not API_SCRIPT.exists():
-        print(f"Erro: API nao encontrada em {API_SCRIPT}")
-        return None
-
-    try:
-        process = subprocess.Popen(
-            [sys.executable, str(API_SCRIPT)],
-            cwd=str(BASE_DIR),
-        )
-    except Exception as error:
-        print(f"Erro ao iniciar servidor Python: {error}")
-        return None
-
-    print(f"Servidor Python iniciado em {API_URL}")
-    return process
 
 
 def start_frontend():
@@ -105,7 +82,6 @@ def find_node(npm_cmd):
 
 def open_browser():
     print(f"Abrindo navegador em {FRONTEND_URL}...")
-
     try:
         webbrowser.open(FRONTEND_URL)
     except Exception as error:
@@ -115,50 +91,31 @@ def open_browser():
 
 def main():
     print("=" * 58)
-    print("JARVIS - inicializacao automatica")
+    print("JARVIS - Inicializador do Frontend React")
     print("=" * 58)
 
-    processes = []
-
-    api_process = start_api_server()
-    if api_process:
-        processes.append(api_process)
-
     frontend_process = start_frontend()
-    if frontend_process:
-        processes.append(frontend_process)
-
-    time.sleep(3)
-
-    if frontend_process:
-        open_browser()
-
-    if not processes:
-        print("Nenhum servico foi iniciado. Corrija os erros acima e tente novamente.")
+    if not frontend_process:
+        print("Nao foi possivel iniciar o frontend. Corrija os erros acima.")
         return 1
 
+    time.sleep(3)
+    open_browser()
+
     print()
-    print("Sistema iniciado.")
-    print(f"API: {API_URL}/api/status")
-    print(f"Frontend: {FRONTEND_URL}")
+    print("Servidor React iniciado com sucesso!")
+    print(f"Acesse: {FRONTEND_URL}")
     print("Pressione Ctrl+C para encerrar.")
 
     try:
         while True:
-            for process in list(processes):
-                if process.poll() is not None:
-                    print(f"Processo encerrado com codigo {process.returncode}.")
-                    processes.remove(process)
-
-            if not processes:
-                print("Todos os servicos foram encerrados.")
+            if frontend_process.poll() is not None:
+                print(f"O servidor do frontend encerrou com codigo {frontend_process.returncode}.")
                 return 1
-
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\nDesligando JARVIS...")
-        for process in processes:
-            process.terminate()
+        print("\nDesligando Frontend do JARVIS...")
+        frontend_process.terminate()
         return 0
 
 
