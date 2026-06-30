@@ -103,11 +103,21 @@ def assistant_loop():
                     continue
 
                 # IA
+                from app.memory.memory_manager import build_ai_context, load_memory
+                from api_server import with_salutation, build_salutation
+
+                context = build_ai_context(cleaned_command)
                 response = ask_jarvis(
-                    cleaned_command
+                    cleaned_command,
+                    context=context
                 )
 
-                speak(response)
+                memory = load_memory()
+                user_name = memory.get("profile", {}).get("nome", "")
+                salutation = build_salutation(user_name)
+
+                final_response = with_salutation(response, salutation)
+                speak(final_response)
 
             except Exception as error:
 

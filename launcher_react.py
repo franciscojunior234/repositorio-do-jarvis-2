@@ -83,10 +83,32 @@ def find_node(npm_cmd):
 def open_browser():
     print(f"Abrindo navegador em {FRONTEND_URL}...")
     try:
-        webbrowser.open(FRONTEND_URL)
-    except Exception as error:
-        print(f"Nao consegui abrir o navegador automaticamente: {error}")
-        print(f"Acesse manualmente: {FRONTEND_URL}")
+        # Tenta abrir usando o Google Chrome registrado no sistema
+        chrome = webbrowser.get("chrome")
+        chrome.open(FRONTEND_URL)
+    except Exception:
+        # Caso falhe, tenta localizar nos caminhos comuns de instalação do Chrome no Windows
+        chrome_paths = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        ]
+        opened = False
+        for path in chrome_paths:
+            if os.path.exists(path):
+                try:
+                    subprocess.Popen([path, FRONTEND_URL])
+                    opened = True
+                    break
+                except Exception:
+                    pass
+        
+        if not opened:
+            # Fallback para o navegador padrão do sistema se o Chrome não estiver disponível
+            try:
+                webbrowser.open(FRONTEND_URL)
+            except Exception as error:
+                print(f"Nao consegui abrir o navegador automaticamente: {error}")
+                print(f"Acesse manualmente: {FRONTEND_URL}")
 
 
 def main():

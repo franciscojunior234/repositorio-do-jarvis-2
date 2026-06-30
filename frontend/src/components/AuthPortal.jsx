@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import React from "react";
 
 const USERS_KEY = "jarvis.users";
 
@@ -32,7 +33,23 @@ export default function AuthPortal({ onAuthenticated }) {
   const [messageType, setMessageType] = useState("info");
 
   const activeMode = modes[mode];
-  const registeredUsers = useMemo(() => readUsers(), []);
+  const [usersCount, setUsersCount] = useState(0);
+
+  useEffect(() => {
+    fetchUsersCount();
+  }, []);
+
+  async function fetchUsersCount() {
+    try {
+      const response = await fetch("http://127.0.0.1:8765/api/users/count");
+      if (response.ok) {
+        const data = await response.json();
+        setUsersCount(data.count);
+      }
+    } catch (error) {
+      console.error("Erro ao obter contagem de usuarios:", error);
+    }
+  }
 
   function updateField(event) {
     const { name, value } = event.target;
@@ -64,26 +81,38 @@ export default function AuthPortal({ onAuthenticated }) {
     handleRecovery();
   }
 
-  function handleLogin() {
-    const users = readUsers();
+  async function handleLogin() {
     const email = normalizeEmail(form.email);
-    const user = users.find((item) => item.email === email);
-
-    if (!user || user.password !== form.password) {
-      showMessage("Email ou senha invalidos.", "error");
+    if (!email || !form.password) {
+      showMessage("Preencha todos os campos para entrar.", "error");
       return;
     }
 
-    onAuthenticated({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      plan: user.plan,
-    });
+    try {
+      const response = await fetch("http://127.0.0.1:8765/api/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: form.password }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        showMessage(data.error ?? "Email ou senha invalidos.", "error");
+        return;
+      }
+
+      onAuthenticated({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        plan: data.plan,
+      });
+    } catch (error) {
+      showMessage("Erro de conexao com o servidor.", "error");
+    }
   }
 
-  function handleRegister() {
-    const users = readUsers();
+  async function handleRegister() {
     const name = form.name.trim();
     const email = normalizeEmail(form.email);
 
@@ -107,48 +136,57 @@ export default function AuthPortal({ onAuthenticated }) {
       return;
     }
 
-    if (users.some((user) => user.email === email)) {
-      showMessage("Ja existe uma conta com este email.", "error");
-      return;
+    try {
+      const response = await fetch("http://127.0.0.1:8765/api/users/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password: form.password }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        showMessage(data.error ?? "Erro ao realizar cadastro.", "error");
+        return;
+      }
+
+      await fetchUsersCount();
+
+      onAuthenticated({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        plan: data.plan,
+      });
+    } catch (error) {
+      showMessage("Erro de conexao com o servidor.", "error");
     }
-
-    const user = {
-      id: crypto.randomUUID(),
-      name,
-      email,
-      password: form.password,
-      plan: "Licenca inicial",
-      createdAt: new Date().toISOString(),
-    };
-
-    writeUsers([...users, user]);
-
-    onAuthenticated({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      plan: user.plan,
-    });
   }
 
-  function handleRecovery() {
+  async function handleRecovery() {
     const email = normalizeEmail(form.email);
-    const user = readUsers().find((item) => item.email === email);
 
     if (!email) {
       showMessage("Informe o email cadastrado.", "error");
       return;
     }
 
-    if (!user) {
-      showMessage("Nenhuma conta foi encontrada com este email.", "error");
-      return;
-    }
+    try {
+      const response = await fetch("http://127.0.0.1:8765/api/users/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
 
-    showMessage(
-      "Recuperacao registrada. Em producao, o link seria enviado por email.",
-      "success",
-    );
+      if (!response.ok) {
+        showMessage(data.error ?? "Nenhuma conta foi encontrada com este email.", "error");
+        return;
+      }
+
+      showMessage(data.message, "success");
+    } catch (error) {
+      showMessage("Erro de conexao com o servidor.", "error");
+    }
   }
 
   function showMessage(text, type) {
@@ -237,6 +275,18 @@ export default function AuthPortal({ onAuthenticated }) {
                   />
                 )}
 
+                {mode === "login" && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => switchMode("recovery")}
+                      className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors bg-transparent border-none outline-none cursor-pointer"
+                    >
+                      Esqueceu sua senha?
+                    </button>
+                  </div>
+                )}
+
                 {mode === "register" && (
                   <Field
                     label="Confirmar senha"
@@ -264,12 +314,37 @@ export default function AuthPortal({ onAuthenticated }) {
                 <button className="w-full rounded-xl border border-cyan-300/30 bg-cyan-400/15 px-4 py-3 font-semibold text-cyan-50 shadow-[0_0_28px_rgba(0,255,255,0.14)] transition hover:border-cyan-200/60 hover:bg-cyan-400/25">
                   {activeMode.action}
                 </button>
+
+                {mode === "recovery" && (
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => switchMode("login")}
+                      className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors bg-transparent border-none outline-none cursor-pointer"
+                    >
+                      Voltar para o Login
+                    </button>
+                  </div>
+                )}
+
+                {mode === "register" && (
+                  <div className="text-center pt-2">
+                    <span className="text-xs text-cyan-300/60">Já tem uma conta? </span>
+                    <button
+                      type="button"
+                      onClick={() => switchMode("login")}
+                      className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors bg-transparent border-none outline-none cursor-pointer"
+                    >
+                      Entrar
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3 text-center">
-            <StatusTile label="Usuarios" value={registeredUsers.length} />
+            <StatusTile label="Usuarios" value={usersCount} />
             <StatusTile label="Status" value="Seguro" />
             <StatusTile label="Licenca" value="Ativa" />
           </div>

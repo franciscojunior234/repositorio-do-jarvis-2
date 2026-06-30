@@ -79,10 +79,18 @@ def process_command(message, user_name=None):
 def build_salutation(user_name):
     clean_name = (user_name or "").strip()
     if not clean_name:
-        return "Sr"
+        try:
+            from app.memory.memory_manager import load_memory
+            memory = load_memory()
+            clean_name = memory.get("profile", {}).get("nome", "")
+        except Exception as error:
+            print(f"Erro ao obter nome da memoria: {error}")
+
+    if not clean_name:
+        return "Sr."
 
     first_name = clean_name.split()[0].strip()
-    return f"Sr {first_name}" if first_name else "Sr"
+    return f"Sr. {first_name}" if first_name else "Sr."
 
 
 def with_salutation(response, salutation):
@@ -159,17 +167,76 @@ class JarvisRequestHandler(BaseHTTPRequestHandler):
                 },
             )
             return
+        elif path == "/api/users/count":
+            try:
+                from app.memory.users_manager import load_users
+                users = load_users()
+                self._send_json(200, {"count": len(users)})
+            except Exception as error:
+                self._send_json(500, {"error": str(error)})
+            return
 
         self._send_json(404, {"error": "Rota nao encontrada."})
 
     def do_POST(self):
         path = urlparse(self.path).path
 
-        if path not in {"/api/chat", "/api/listen"}:
+        if path not in {"/api/chat", "/api/listen", "/api/users/register", "/api/users/login", "/api/users/recovery"}:
             self._send_json(404, {"error": "Rota nao encontrada."})
             return
 
         payload = self._read_json_body()
+
+        if path == "/api/users/register":
+            try:
+                from app.memory.users_manager import register_user
+                name = payload.get("name", "")
+                email = payload.get("email", "")
+                password = payload.get("password", "")
+
+                user, error = register_user(name, email, password)
+                if error:
+                    self._send_json(400, {"error": error})
+                else:
+                    self._send_json(200, user)
+            except Exception as error:
+                self._send_json(500, {"error": str(error)})
+            return
+
+        elif path == "/api/users/login":
+            try:
+                from app.memory.users_manager import login_user
+                email = payload.get("email", "")
+                password = payload.get("password", "")
+
+                user, error = login_user(email, password)
+                if error:
+                    self._send_json(400, {"error": error})
+                else:
+                    self._send_json(200, user)
+            except Exception as error:
+                self._send_json(500, {"error": str(error)})
+            return
+
+        elif path == "/api/users/recovery":
+            try:
+                from app.memory.users_manager import recover_password
+                email = payload.get("email", "")
+
+                user, error = recover_password(email)
+                if error:
+                    self._send_json(400, {"error": error})
+                else:
+                    self._send_json(
+                        200,
+                        {
+                            "success": True,
+                            "message": "Recuperacao registrada. Em producao, o link seria enviado por email.",
+                        },
+                    )
+            except Exception as error:
+                self._send_json(500, {"error": str(error)})
+            return
 
         if path == "/api/listen":
             try:
