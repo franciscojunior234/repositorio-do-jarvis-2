@@ -1,0 +1,12 @@
+{
+    "luz do quarto": {
+        "aliases": ["lampada do quarto", "quarto"],
+        "on": "http://127.0.0.1:9001/devices/quarto/on",
+        "off": "http://127.0.0.1:9001/devices/quarto/off"
+    },
+    "tomada da mesa": {
+        "aliases": ["mesa", "tomada"],
+        "on": "http://127.0.0.1:9001/devices/mesa/on",
+        "off": "http://127.0.0.1:9001/devices/mesa/off"
+    }
+}

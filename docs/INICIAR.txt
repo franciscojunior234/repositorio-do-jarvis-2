@@ -1,0 +1,38 @@
+🤖 JARVIS - SISTEMA UNIFICADO
+=====================================
+
+📋 INSTRUÇÕES DE USO:
+
+1️⃣  OPÇÃO SIMPLES (Recomendado):
+   ✓ Clique duas vezes em: START.bat
+   
+   Ou execute no PowerShell:
+   python launcher.py
+
+2️⃣  O que acontece automaticamente:
+   ✓ Servidor Python (Backend) inicia em http://127.0.0.1:8765
+   ✓ Frontend React (Frontend) inicia em http://localhost:5173
+   ✓ Chrome abre automaticamente com a interface
+   ✓ Sistema aguarda o comando de voz "Olá, Jarvis"
+
+3️⃣  COMANDOS DE VOZ DISPONÍVEIS:
+   ✓ "Olá, Jarvis" - Ativa o assistente (Wake Word)
+   ✓ "Jarvis" - Também funciona
+   ✓ "Friday" - Também funciona
+   ✓ "Computer" - Também funciona
+   ✓ "Desligar" - Encerra o sistema
+
+4️⃣  PARAR O SISTEMA:
+   ✓ Diga: "Desligar"
+   ✓ Ou pressione: Ctrl+C no terminal
+
+📝 NOTAS IMPORTANTES:
+   • Certifique-se que o microfone está conectado
+   • Tenha internet para usar a API Groq
+   • O Chrome será aberto automaticamente
+   • Todos os serviços rodam em segundo plano
+
+🎯 OBJETIVO:
+   Um único clique para iniciar tudo!
+   Tudo gerenciado em um único processo.
+=====================================
